@@ -45,6 +45,17 @@ export const api = {
         });
         return res.json();
     },
+    commentPost: async (postId, comment, token) => {
+        const res = await fetch(`${API_URL}/posts/${postId}/comment`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({text: comment})  // Send 'text' field
+        });
+        return res.json();
+    },
 
     deletePost: async (postId, token) => {
         const res = await fetch(`${API_URL}/posts/${postId}`, {

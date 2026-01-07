@@ -48,6 +48,32 @@ function MainFeed({user, setUser}) {
         }
     }
 
+    const handleComment = async (postId, commentText) => {
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL;
+            const response = await fetch(`${apiUrl}/posts/${postId}/comment`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${user.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({text: commentText})
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Return success with the updated post data
+                return {success: true, post: data};
+            } else {
+                throw new Error(data.error || 'Failed to add comment');
+            }
+        } catch (error) {
+            console.error('Error commenting on post:', error);
+            throw error;
+        }
+    }
+
     const handleDelete = async (postId) => {
         if (!window.confirm('Are you sure you want to delete this post?')) return
 
@@ -146,6 +172,7 @@ function MainFeed({user, setUser}) {
                                     post={post}
                                     user={user}
                                     onLike={() => handleLike(post._id)}
+                                    onComment={handleComment}
                                     onDelete={() => handleDelete(post._id)}
                                 />
 

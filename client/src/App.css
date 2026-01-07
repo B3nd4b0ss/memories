@@ -493,6 +493,156 @@ body {
     gap: 15px;
     font-size: 14px;
     color: #94a3b8;
+    margin-bottom: 15px;
+}
+
+/* ===== COMMENTS SECTION ===== */
+.comments-section {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #334155;
+}
+
+.existing-comments {
+    margin-bottom: 15px;
+}
+
+.comment-item {
+    margin-bottom: 12px;
+    padding: 12px;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 8px;
+    border: 1px solid #334155;
+    transition: background-color 0.2s;
+}
+
+.comment-item:hover {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: #475569;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: #cbd5e1;
+    font-size: 14px;
+}
+
+.comment-time {
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.comment-text {
+    font-size: 14px;
+    color: #f1f5f9;
+    line-height: 1.5;
+    padding-left: 4px;
+}
+
+.view-all-comments-btn {
+    background: none;
+    border: none;
+    color: #6366f1;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 8px 0;
+    margin-top: 5px;
+    width: 100%;
+    text-align: left;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+.view-all-comments-btn:hover {
+    color: #8b5cf6;
+    text-decoration: underline;
+}
+
+/* Comment Input Styles */
+.comment-input-container {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(15, 23, 42, 0.8);
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.comment-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    resize: none;
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 10px;
+    background: rgba(30, 41, 59, 0.5);
+    color: #f1f5f9;
+    transition: all 0.3s ease;
+}
+
+.comment-textarea:focus {
+    outline: none;
+    border-color: #6366f1;
+    background: rgba(30, 41, 59, 0.8);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.comment-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.submit-comment-btn {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.submit-comment-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(99, 102, 241, 0.3);
+}
+
+.submit-comment-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.cancel-comment-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+    border: 1px solid #475569;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.cancel-comment-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Post Actions Active State */
+.comment-btn.active {
+    background: rgba(99, 102, 241, 0.2);
+    color: #6366f1;
 }
 
 /* ===== MEDIA CAROUSEL ===== */
@@ -501,6 +651,7 @@ body {
     border-radius: 12px;
     overflow: hidden;
     background: #0f172a;
+    margin-bottom: 20px;
 }
 
 .carousel-container {
@@ -1114,12 +1265,14 @@ input:checked + .slider:before {
 }
 
 .spinner {
+    display: inline-block;
     width: 20px;
     height: 20px;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     border-top-color: white;
     animation: spin 1s linear infinite;
+    margin-right: 8px;
 }
 
 @keyframes spin {
@@ -1391,6 +1544,16 @@ input:checked + .slider:before {
     .upload-grid {
         grid-template-columns: 1fr;
     }
+
+    .comment-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .comment-time {
+        font-size: 11px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1412,6 +1575,14 @@ input:checked + .slider:before {
         width: 40px;
         height: 40px;
         font-size: 18px;
+    }
+
+    .comment-actions {
+        flex-direction: column;
+    }
+
+    .comment-actions button {
+        width: 100%;
     }
 }
 
