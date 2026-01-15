@@ -68,8 +68,25 @@ const postSchema = new mongoose.Schema({
     updatedAt: {type: Date, default: Date.now}
 });
 
+const folderSchema = new mongoose.Schema({
+    name: {type: String, required: true},
+    description: {type: String, default: ''},
+    creatorEmail: {type: String, required: true},
+    allowedUsers: [{type: String}], // Array of user emails with access
+    color: {type: String, default: '#6366f1'}, // Color for UI
+    isPrivate: {type: Boolean, default: false},
+    createdAt: {type: Date, default: Date.now},
+    updatedAt: {type: Date, default: Date.now}
+});
+
+postSchema.add({
+    folderId: {type: mongoose.Schema.Types.ObjectId, ref: 'Folder', default: null}
+});
+
 const User = mongoose.model('User', userSchema);
 const Post = mongoose.model('Post', postSchema);
+const Folder = mongoose.model('Folder', folderSchema);
+
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -148,12 +165,166 @@ app.post('/api/login', async (req, res) => {
 
 // --- POST ROUTES ---
 
+app.post('/api/folders', authenticateToken, async (req, res) => {
+    try {
+        const {name, description, color, isPrivate, allowedUsers} = req.body;
+
+        // Ensure allowedUsers is an array
+        const users = Array.isArray(allowedUsers) ? allowedUsers : [];
+
+        const newFolder = new Folder({
+            name,
+            description,
+            color,
+            isPrivate: isPrivate || false,
+            creatorEmail: req.user.email,
+            allowedUsers: [...users, req.user.email] // Creator always has access
+        });
+
+        await newFolder.save();
+        res.status(201).json({message: 'Folder created successfully', folder: newFolder});
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({error: 'Failed to create folder'});
+    }
+});
+
+app.get('/api/folders', authenticateToken, async (req, res) => {
+    try {
+        const folders = await Folder.find({
+            $or: [
+                {creatorEmail: req.user.email},
+                {allowedUsers: req.user.email},
+                {isPrivate: false} // Include public folders
+            ]
+        }).sort({updatedAt: -1});
+
+        res.status(200).json(folders);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({error: 'Failed to fetch folders'});
+    }
+});
+app.get('/api/folders/all', authenticateToken, async (req, res) => {
+    try {
+        if (!req.user.isAdmin) return res.status(403).json({error: 'Admin access required'});
+
+        const folders = await Folder.find().sort({updatedAt: -1});
+        res.status(200).json(folders);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({error: 'Failed to fetch all folders'});
+    }
+});
+
+app.get('/api/folders/:id', authenticateToken, async (req, res) => {
+    try {
+        const folder = await Folder.findById(req.params.id);
+        if (!folder) return res.status(404).json({error: 'Folder not found'});
+
+        // Check if user has access
+        if (!req.user.isAdmin &&
+            folder.creatorEmail !== req.user.email &&
+            !folder.allowedUsers.includes(req.user.email)) {
+            return res.status(403).json({error: 'Access denied'});
+        }
+
+        // Get posts in this folder
+        const posts = await Post.find({folderId: folder._id})
+            .sort({createdAt: -1})
+            .lean();
+
+        const postsMeta = posts.map(post => ({
+            ...post,
+            media: post.media.map(m => ({
+                filename: m.filename,
+                type: m.type,
+                size: m.size
+            }))
+        }));
+
+        res.status(200).json({folder, posts: postsMeta});
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({error: 'Failed to fetch folder'});
+    }
+});
+
+app.put('/api/folders/:id', authenticateToken, async (req, res) => {
+    try {
+        const folder = await Folder.findById(req.params.id);
+        if (!folder) return res.status(404).json({error: 'Folder not found'});
+
+        // Check if user is creator or admin
+        if (!req.user.isAdmin && folder.creatorEmail !== req.user.email) {
+            return res.status(403).json({error: 'Only folder creator can modify'});
+        }
+
+        const {name, description, color, isPrivate, allowedUsers} = req.body;
+
+        if (name) folder.name = name;
+        if (description !== undefined) folder.description = description;
+        if (color) folder.color = color;
+        if (isPrivate !== undefined) folder.isPrivate = isPrivate;
+
+        if (Array.isArray(allowedUsers)) {
+            // Ensure creator always has access
+            if (!allowedUsers.includes(folder.creatorEmail)) {
+                allowedUsers.push(folder.creatorEmail);
+            }
+            folder.allowedUsers = allowedUsers;
+        }
+
+        folder.updatedAt = new Date();
+        await folder.save();
+
+        res.status(200).json({message: 'Folder updated successfully', folder});
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({error: 'Failed to update folder'});
+    }
+});
+
+app.delete('/api/folders/:id', authenticateToken, async (req, res) => {
+    try {
+        const folder = await Folder.findById(req.params.id);
+        if (!folder) return res.status(404).json({error: 'Folder not found'});
+
+        // Check if user is creator or admin
+        if (!req.user.isAdmin && folder.creatorEmail !== req.user.email) {
+            return res.status(403).json({error: 'Only folder creator can delete'});
+        }
+
+        // Remove folder reference from posts
+        await Post.updateMany(
+            {folderId: folder._id},
+            {$set: {folderId: null}}
+        );
+
+        await Folder.findByIdAndDelete(req.params.id);
+        res.status(200).json({message: 'Folder deleted successfully'});
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({error: 'Failed to delete folder'});
+    }
+});
+
 // Create Post (Admin only)
 app.post('/api/posts', authenticateToken, upload.array('media', 10), async (req, res) => {
     try {
-        const {description, uploaderEmail} = req.body;
+        const {description, uploaderEmail, folderId} = req.body;
         const files = req.files;
         if (!files || files.length === 0) return res.status(400).json({error: 'No files uploaded'});
+
+        // If folderId is provided, verify user has access
+        if (folderId && folderId !== 'null') {
+            const folder = await Folder.findById(folderId);
+            if (folder && !req.user.isAdmin &&
+                folder.creatorEmail !== req.user.email &&
+                !folder.allowedUsers.includes(req.user.email)) {
+                return res.status(403).json({error: 'No access to this folder'});
+            }
+        }
 
         const media = files.map(file => ({
             filename: file.originalname,
@@ -166,6 +337,7 @@ app.post('/api/posts', authenticateToken, upload.array('media', 10), async (req,
             description,
             media,
             uploaderEmail: uploaderEmail || req.user.email,
+            folderId: folderId || null,
             likes: [],
             comments: [],
             shares: 0
@@ -185,17 +357,49 @@ app.get('/api/posts', authenticateToken, async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
+        const folderId = req.query.folderId;
 
-        const posts = await Post.find()
+        let query = {};
+
+        if (folderId && folderId !== 'all') {
+            // If specific folder, verify access
+            const folder = await Folder.findById(folderId);
+            if (!folder) return res.status(404).json({error: 'Folder not found'});
+
+            if (!req.user.isAdmin &&
+                folder.creatorEmail !== req.user.email &&
+                !folder.allowedUsers.includes(req.user.email)) {
+                return res.status(403).json({error: 'No access to this folder'});
+            }
+
+            query.folderId = folderId;
+        } else if (folderId !== 'all') {
+            // If no specific folder, get posts from accessible folders + public posts
+            const accessibleFolders = await Folder.find({
+                $or: [
+                    {creatorEmail: req.user.email},
+                    {allowedUsers: req.user.email},
+                    {isPrivate: false}
+                ]
+            }).select('_id');
+
+            const folderIds = accessibleFolders.map(f => f._id);
+
+            query.$or = [
+                {folderId: {$in: folderIds}},
+                {folderId: null} // Public posts
+            ];
+        }
+
+        const posts = await Post.find(query)
             .sort({createdAt: -1})
             .skip(skip)
             .limit(limit)
             .lean();
 
-        const total = await Post.countDocuments();
+        const total = await Post.countDocuments(query);
         const hasMore = skip + posts.length < total;
 
-        // Return only metadata for media (not binary) to reduce payload
         const postsMeta = posts.map(post => ({
             ...post,
             media: post.media.map(m => ({
@@ -211,7 +415,6 @@ app.get('/api/posts', authenticateToken, async (req, res) => {
         res.status(500).json({error: 'Failed to fetch posts'});
     }
 });
-
 // Like / Unlike Post
 app.post('/api/posts/:id/like', authenticateToken, async (req, res) => {
     try {

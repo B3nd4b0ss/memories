@@ -1,13 +1,30 @@
-import {useState} from 'react'
+import {useState, useEffect} from 'react'
 import {useNavigate} from 'react-router-dom'
 import Navigation from './Navigation.jsx'
+import {api} from '../utils/api.js'
 
 function UploadPage({user, setUser}) {
     const [files, setFiles] = useState([])
     const [description, setDescription] = useState('')
     const [uploading, setUploading] = useState(false)
     const [message, setMessage] = useState({type: '', text: ''})
+    const [selectedFolder, setSelectedFolder] = useState(null)
+    const [folders, setFolders] = useState([])
+    const [showFolderSelector, setShowFolderSelector] = useState(false)
     const navigate = useNavigate()
+
+    useEffect(() => {
+        fetchFolders()
+    }, [])
+
+    const fetchFolders = async () => {
+        try {
+            const data = await api.folders.getFolders(user.token)
+            setFolders(data)
+        } catch (error) {
+            console.error('Error loading folders:', error)
+        }
+    }
 
     const handleFileChange = (e) => {
         const selectedFiles = Array.from(e.target.files)
@@ -50,6 +67,9 @@ function UploadPage({user, setUser}) {
         })
         formData.append('description', description)
         formData.append('uploaderEmail', user.email)
+        if (selectedFolder && selectedFolder !== 'null') {
+            formData.append('folderId', selectedFolder)
+        }
 
         try {
             const response = await fetch(`${apiUrl}/posts`, {
@@ -66,6 +86,7 @@ function UploadPage({user, setUser}) {
                 setMessage({type: 'success', text: 'Post created successfully!'})
                 setFiles([])
                 setDescription('')
+                setSelectedFolder(null)
 
                 setTimeout(() => navigate('/feed'), 2000)
             } else {
@@ -110,6 +131,12 @@ function UploadPage({user, setUser}) {
                             {description && (
                                 <div className="preview-description">
                                     {description}
+                                </div>
+                            )}
+
+                            {selectedFolder && folders.find(f => f._id === selectedFolder) && (
+                                <div className="preview-folder-tag">
+                                    📁 {folders.find(f => f._id === selectedFolder).name}
                                 </div>
                             )}
 
@@ -182,6 +209,69 @@ function UploadPage({user, setUser}) {
                                         </div>
                                     </div>
                                 )}
+                            </div>
+
+                            <div className="form-group">
+                                <div className="folder-selection-header">
+                                    <label>Post Location</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/feed')}
+                                        className="manage-folders-btn"
+                                    >
+                                        Manage Folders
+                                    </button>
+                                </div>
+
+                                <div className="folder-selector">
+                                    <div className="folder-options">
+                                        <button
+                                            type="button"
+                                            className={`folder-option ${!selectedFolder ? 'selected' : ''}`}
+                                            onClick={() => setSelectedFolder(null)}
+                                        >
+                                            <div className="folder-icon" style={{background: '#6366f1'}}>
+                                                🌟
+                                            </div>
+                                            <div className="folder-details">
+                                                <span className="folder-name">Public Feed</span>
+                                                <span className="folder-hint">Visible to everyone</span>
+                                            </div>
+                                        </button>
+
+                                        {folders.map(folder => (
+                                            <button
+                                                key={folder._id}
+                                                type="button"
+                                                className={`folder-option ${selectedFolder === folder._id ? 'selected' : ''}`}
+                                                onClick={() => setSelectedFolder(folder._id)}
+                                            >
+                                                <div className="folder-icon" style={{background: folder.color}}>
+                                                    📁
+                                                </div>
+                                                <div className="folder-details">
+                                                    <span className="folder-name">{folder.name}</span>
+                                                    <span className="folder-hint">
+                                                        {folder.isPrivate ? 'Private' : 'Shared'} • {folder.allowedUsers.length} users
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {folders.length === 0 && (
+                                        <div className="no-folders-message">
+                                            <p>No folders yet. Create folders to organize your posts.</p>
+                                            <button
+                                                type="button"
+                                                onClick={() => navigate('/feed')}
+                                                className="create-folder-link"
+                                            >
+                                                Create your first folder
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="form-group">

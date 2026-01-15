@@ -36,7 +36,6 @@ function FeedPost({post, user, onLike, onDelete, onComment}) {
         try {
             const result = await onComment(post._id, commentText);
             if (result && result.success) {
-                // Add the new comment to local state immediately
                 const newComment = {
                     userEmail: user.email,
                     text: commentText,

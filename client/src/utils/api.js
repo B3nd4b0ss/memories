@@ -30,9 +30,9 @@ export const api = {
         return res.json();
     },
 
-    getPosts: async (page = 1, limit = 10) => {
+    getPosts: async (page = 1, limit = 10, folderId = 'all') => {
         const user = JSON.parse(localStorage.getItem('user') || 'null');
-        const res = await fetch(`${API_URL}/posts?page=${page}&limit=${limit}`, {
+        const res = await fetch(`${API_URL}/posts?page=${page}&limit=${limit}&folderId=${folderId}`, {
             headers: {'Authorization': `Bearer ${user?.token || ''}`}
         });
         return res.json();
@@ -41,10 +41,14 @@ export const api = {
     likePost: async (postId, token) => {
         const res = await fetch(`${API_URL}/posts/${postId}/like`, {
             method: 'POST',
-            headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
         });
         return res.json();
     },
+
     commentPost: async (postId, comment, token) => {
         const res = await fetch(`${API_URL}/posts/${postId}/comment`, {
             method: 'POST',
@@ -52,7 +56,7 @@ export const api = {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({text: comment})  // Send 'text' field
+            body: JSON.stringify({text: comment})
         });
         return res.json();
     },
@@ -75,14 +79,19 @@ export const api = {
 
     // --- Users ---
     getUsers: async (token) => {
-        const res = await fetch(`${API_URL}/users`, {headers: {'Authorization': `Bearer ${token}`}});
+        const res = await fetch(`${API_URL}/users`, {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
         return res.json();
     },
 
     updateUserRole: async (userId, isAdmin, token) => {
         const res = await fetch(`${API_URL}/users/${userId}/role`, {
             method: 'PUT',
-            headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({isAdmin})
         });
         return res.json();
@@ -98,8 +107,66 @@ export const api = {
 
     // --- Stats ---
     getStats: async (token) => {
-        const res = await fetch(`${API_URL}/stats`, {headers: {'Authorization': `Bearer ${token}`}});
+        const res = await fetch(`${API_URL}/stats`, {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
         return res.json();
+    },
+
+    // --- Folders ---
+    folders: {
+        createFolder: async (folderData, token) => {
+            const res = await fetch(`${API_URL}/folders`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(folderData)
+            });
+            return res.json();
+        },
+
+        getFolders: async (token) => {
+            const res = await fetch(`${API_URL}/folders`, {
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            return res.json();
+        },
+
+        getFolder: async (folderId, token) => {
+            const res = await fetch(`${API_URL}/folders/${folderId}`, {
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            return res.json();
+        },
+
+        updateFolder: async (folderId, updates, token) => {
+            const res = await fetch(`${API_URL}/folders/${folderId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updates)
+            });
+            return res.json();
+        },
+
+        deleteFolder: async (folderId, token) => {
+            const res = await fetch(`${API_URL}/folders/${folderId}`, {
+                method: 'DELETE',
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            return res.json();
+        },
+
+        getAllFolders: async (token) => {
+            const res = await fetch(`${API_URL}/folders/all`, {
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            return res.json();
+        }
     }
 };
 
